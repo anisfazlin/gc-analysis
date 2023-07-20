@@ -1,11 +1,10 @@
 import streamlit as st
 from pycoingecko import CoinGeckoAPI
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
-cg = CoinGeckoAPI()
 
 st.set_page_config(page_title='Crypto Dashboard', page_icon=':bar_chart:') 
 
@@ -55,28 +54,29 @@ st.header('Trend Analysis')
 day_7 = generate_date(7)
 day_30 = generate_date(30)
 
+date = [day_7, day_30]
 # st.write(day_7)
 
 hist_seven = fetch_data("bitcoin", day_7)
 hist_thirty = fetch_data("bitcoin", day_30)
 
 marketcap_data = {
-    'date': [day_7, day_30],
-    'value' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]]
+    # 'date' : [day_7, day_30],
+    'market_cap' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]],
 }  
- 
+
 volume_data = {
-    'date': [day_7, day_30],
-'value' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
-}  
+    # 'date' : [day_7, day_30],
+    'trading_volume' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
+}
+market_df = pd.DataFrame(marketcap_data, index = date)
+volume_df = pd.DataFrame(volume_data, index = date)
 
-df_marketcap = pd.DataFrame(marketcap_data)
-df_volume = pd.DataFrame(volume_data)
-
-date_chart = pd.concat([df_marketcap, df_volume], ignore_index = True)
-st.write(date_chart)
-
-
+market_col, volume_col = st.columns([1,1])
+# st.subheader('Market Capitalisation in Price (BTC) for a week and a month ago')
+market_col.area_chart(market_df)
+volume_col.area_chart(volume_df)
+ 
 # Trading Volume Comparison:  
 # Provide a bar chart or line chart using Streamlit to compare the trading volumes of different cryptocurrencies.
 # Display the data for both 7 days and 30 days side by side.
@@ -128,8 +128,6 @@ st.bar_chart(df_volume)
 # Use a line chart with Streamlit to show the growth by different chains separately for each time frame.
 # Include Streamlit's labels or annotations to highlight notable changes or trends.
 
-
-
 # Top Defi Coin:
 # Display the top decentralized finance coin by market capitalization for both 7 days and 30 days.
 # Show the market dominance percentage for each time frame.
@@ -142,8 +140,8 @@ st.header('DeFi Market Overview')
 defi_data = get_defi_data()
 
 defi_market_cap = float(defi_data["defi_market_cap"])
-
 col_DeFi_Market_cap, col_DeFi_dominance = st.columns(2)
+
 col_DeFi_Market_cap.metric('DeFi Market Cap', f'{defi_market_cap:,.0f} USD')
 col_DeFi_dominance.metric('Decentralized Finance Dominance', defi_data["defi_dominance"])
 
