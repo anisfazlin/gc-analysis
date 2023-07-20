@@ -1,9 +1,21 @@
 import streamlit as st
 from pycoingecko import CoinGeckoAPI
-import plotly.express as px
 import pandas as pd
+import plotly.express as px
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+
+cg = CoinGeckoAPI()
 
 st.set_page_config(page_title='Crypto Dashboard', page_icon=':bar_chart:') 
+
+from datetime import datetime, timedelta
+
+def generate_date(num_days):    
+    current_date = datetime.now().date()
+    time_durations = current_date - timedelta(days=num_days)
+    formatted_date = time_durations.strftime('%d-%m-%Y')
+    return formatted_date
 
 @st.cache_data
 def get_market_data():
@@ -12,12 +24,16 @@ def get_market_data():
 
 market_data = get_market_data()
 
-def get_history_data(id, date):
+@st.cache_data
+def get_defi_data():
+    cg = CoinGeckoAPI()
+    defi_data = cg.get_global_decentralized_finance_defi()
+    return defi_data
+
+@st.cache_data
+def fetch_data (id, date):
     cg = CoinGeckoAPI()
     return cg.get_coin_history_by_id(id=id, date=date)
-
-history_data = get_history_data("bitcoin", "10-7-2023")
-    
 
 st.title('Crypto Market Dashboard')
 
@@ -35,68 +51,103 @@ col2.metric('Trading Volume', f'{market_data["total_volume"]["btc"]:,.0f} BTC')
 # Utilize Streamlit's interactive features to allow users to zoom in and out on the charts.
 
 st.header('Trend Analysis')
-# df = pd.DataFrame(history_data["btc"])
-# fig = px.line(df, x="date", y="lifeExp", color='country')
-# fig.show()
 
-st.write(history_data["market_data"]["total_volume"]["btc"])
-# st.line_chart(chart_data)
+day_7 = generate_date(7)
+day_30 = generate_date(30)
 
-# Defi Market Capitalization:
-# Display the market capitalization of top DeFi tokens for both 7 days and 30 days.
-# Present the growth rates and percentage change in market caps between the two time frames.  
-# Use Streamlit's table or plot components to showcase the comparative data.
+# st.write(day_7)
 
-def plot_defi_marketcap(cg, top_n=10):
+hist_seven = fetch_data("bitcoin", day_7)
+hist_thirty = fetch_data("bitcoin", day_30)
 
-  # Get current market cap
-  current = cg.get_coins_markets(vs_currency='usd', category='decentralized_finance_defi', per_page=50)
-  current_df = pd.DataFrame([x['market_cap'] for x in current], columns=['market_cap'])
+marketcap_data = {
+    'date': [day_7, day_30],
+    'value' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]]
+}  
+ 
+volume_data = {
+    'date': [day_7, day_30],
+'value' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
+}  
 
-  # Get previous market cap
-  prev = cg.get_coins_markets(vs_currency='usd', category='decentralized_finance_defi', order='market_cap_desc', per_page=50, page=1, sparkline=False, price_change_percentage='24h')
-  prev_df = pd.DataFrame([x['market_cap'] for x in prev], columns=['prev_market_cap'])
+df_marketcap = pd.DataFrame(marketcap_data)
+df_volume = pd.DataFrame(volume_data)
 
-  # Join and calculate % change
-  df = current_df.join(prev_df) 
-  df['pct_change'] = (df['market_cap'] - df['prev_market_cap']) / df['prev_market_cap'] * 100
+date_chart = pd.concat([df_marketcap, df_volume], ignore_index = True)
+st.write(date_chart)
 
-  # Filter top tokens
-  top_tokens = df.nlargest(top_n, 'market_cap')   
-
-  # Create chart
-  fig = px.bar(top_tokens, x=top_tokens.index, y='market_cap', 
-               color='pct_change', color_continuous_scale='RdYlGn',
-              title=f'Top {top_n} DeFi Tokens by Market Cap')
-
-  return fig
-
-# Example usage:
-
-cg = CoinGeckoAPI() 
-chart = plot_defi_marketcap(cg, top_n=10)
-st.plotly_chart(chart)
-
-# Defi Dominance:
-# Plot a line chart using Streamlit to visualize the ratio of DeFi market capitalization to total market capitalization.
-# Show the trends for both 7 days and 30 days on the same chart.
-# Utilize Streamlit's labeling or annotation capabilities to indicate any significant changes in DeFi dominance.
 
 # Trading Volume Comparison:  
 # Provide a bar chart or line chart using Streamlit to compare the trading volumes of different cryptocurrencies.
 # Display the data for both 7 days and 30 days side by side.
 # Highlight any significant differences or patterns between the two time frames.
 
+st.header("Trading Volume")
+@st.cache_data
+def trading_volume(id):
+    cg = CoinGeckoAPI()
+    data = cg.get_global()
+    volume_data = data["total_volume"]
+    
+    return volume_data[id]
+
+index = ["btc",
+      "eth",
+      "ltc",
+      "bch",
+      "bnb",
+      "eos",
+      "xrp",
+      "xlm",
+      "link",
+      "dot",
+      "yfi",
+      "usd",
+      "aed",
+      "ars",
+      "aud",
+      "bdt",
+      "bhd",
+      "bmd"]
+
+value = []
+for i in index:
+    val = trading_volume(i)
+    value.append(val)
+
+# for v in value:
+#     value = value/100000
+
+df_volume = pd.DataFrame(value, index=index, columns=["Trading Volume"])
+
+
+st.bar_chart(df_volume)
+
 # Defi Adoption Tracking:
 # Present the total value locked (TVL) in DeFi protocols for both 7 days and 30 days.  
 # Use a line chart with Streamlit to show the growth by different chains separately for each time frame.
 # Include Streamlit's labels or annotations to highlight notable changes or trends.
+
+
 
 # Top Defi Coin:
 # Display the top decentralized finance coin by market capitalization for both 7 days and 30 days.
 # Show the market dominance percentage for each time frame.
 # Utilize Streamlit's table or plot components to compare the performance of different top DeFi coins.
 
-st.header('Top Defi Coins') 
-df = pd.DataFrame(market_data['defi_tokens'])
-st.table(df)
+
+st.header('DeFi Market Overview')
+# data_defi = cg.get_global_decentralized_finance_defi()
+
+defi_data = get_defi_data()
+
+defi_market_cap = float(defi_data["defi_market_cap"])
+
+col_DeFi_Market_cap, col_DeFi_dominance = st.columns(2)
+col_DeFi_Market_cap.metric('DeFi Market Cap', f'{defi_market_cap:,.0f} USD')
+col_DeFi_dominance.metric('Decentralized Finance Dominance', defi_data["defi_dominance"])
+
+col_TopDeFi,col_Top_Dominance = st.columns(2)
+col_TopDeFi.metric('Top Decentralized Finance Coin', f'{defi_data["top_coin_name"]}')
+col_Top_Dominance.metric('Top Coin DeFi Dominance', f'{defi_data["top_coin_defi_dominance"]:,.0f} %')
+    
