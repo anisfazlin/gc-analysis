@@ -62,19 +62,23 @@ hist_thirty = fetch_data("bitcoin", day_30)
 
 marketcap_data = {
     # 'date' : [day_7, day_30],
-    'market_cap' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]],
+    # 'market_cap' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]],
+    '7_days' : [hist_seven["market_data"]["market_cap"]["btc"], hist_seven["market_data"]["total_volume"]["btc"]],
 }  
 
 volume_data = {
     # 'date' : [day_7, day_30],
-    'trading_volume' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
+    # 'trading_volume' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
+    '30_days' : [hist_thirty["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
 }
 market_df = pd.DataFrame(marketcap_data, index = date)
 volume_df = pd.DataFrame(volume_data, index = date)
 
 market_col, volume_col = st.columns([1,1])
 # st.subheader('Market Capitalisation in Price (BTC) for a week and a month ago')
+market_col.subheader("7 days")
 market_col.area_chart(market_df)
+volume_col.subheader("30 days")
 volume_col.area_chart(volume_df)
  
 # Trading Volume Comparison:  
