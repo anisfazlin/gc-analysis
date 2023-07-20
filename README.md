@@ -1,3 +1,4 @@
 # Todo
-- Scrape LinkedIn profiles
-- Obtain news based on the company
+- Scrape LinkedIn profiles [x]
+- Obtain news based on the company [x]
+- Crypto dashboard []
