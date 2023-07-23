@@ -5,16 +5,13 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
+cg = CoinGeckoAPI()
 
 st.set_page_config(page_title='Crypto Dashboard', page_icon=':bar_chart:') 
 
-from datetime import datetime, timedelta
-
-def generate_date(num_days):    
-    current_date = datetime.now().date()
-    time_durations = current_date - timedelta(days=num_days)
-    formatted_date = time_durations.strftime('%d-%m-%Y')
-    return formatted_date
+# Function to convert Unix timestamp to human-readable date
+def convert_unix_to_date(unix_timestamp):
+    return datetime.fromtimestamp(unix_timestamp / 1000).strftime('%Y-%m-%d')
 
 @st.cache_data
 def get_market_data():
@@ -30,9 +27,26 @@ def get_defi_data():
     return defi_data
 
 @st.cache_data
-def fetch_data (id, date):
+def fetch_coin_data (id, vs_currency, days):
     cg = CoinGeckoAPI()
-    return cg.get_coin_history_by_id(id=id, date=date)
+    return cg.get_coin_market_chart_by_id(id = id, vs_currency = vs_currency, days = days)
+
+# Function to fetch data and create the area chart
+def create_area_chart(coin_id, days):
+    # Fetch data from the CoinGecko API
+    data = cg.get_coin_market_chart_range_by_id(id=coin_id, vs_currency='usd', from_timestamp=(datetime.utcnow() - timedelta(days=days)).timestamp(), 
+                                                to_timestamp=datetime.utcnow().timestamp())
+
+    # Convert Unix timestamps to dates and extract the prices
+    dates = [convert_unix_to_date(entry[0]) for entry in data["prices"]]
+    prices = [entry[1] for entry in data["prices"]]
+
+    # Create a DataFrame to store the data
+    df = pd.DataFrame({"Date": dates, "Price (USD)": prices})
+
+    # Create the area chart
+    st.area_chart(data=df, x="Date", y="Price (USD)", use_container_width=True)
+
 
 st.title('Crypto Market Dashboard')
 
@@ -51,35 +65,20 @@ col2.metric('Trading Volume', f'{market_data["total_volume"]["btc"]:,.0f} BTC')
 
 st.header('Trend Analysis')
 
-day_7 = generate_date(7)
-day_30 = generate_date(30)
+# Market Capitalization Comparison:
+# market_col, volume_col = st.columns([1,1])
+# market_col.subheader("7 days")
+# market_col.(create_area_chart("bitcoin", 7))
+# volume_col.subheader("30 days")
+# volume_col.area_chart(create_area_chart("bitcoin", 30))
+sevenday_col, thirtyday_col = st.columns([1, 1])
+with sevenday_col:
+    st.subheader("7 Days Chart")
+    create_area_chart("bitcoin", 7)
 
-date = [day_7, day_30]
-# st.write(day_7)
-
-hist_seven = fetch_data("bitcoin", day_7)
-hist_thirty = fetch_data("bitcoin", day_30)
-
-marketcap_data = {
-    # 'date' : [day_7, day_30],
-    # 'market_cap' : [hist_seven["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["market_cap"]["btc"]],
-    '7_days' : [hist_seven["market_data"]["market_cap"]["btc"], hist_seven["market_data"]["total_volume"]["btc"]],
-}  
-
-volume_data = {
-    # 'date' : [day_7, day_30],
-    # 'trading_volume' : [hist_seven["market_data"]["total_volume"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
-    '30_days' : [hist_thirty["market_data"]["market_cap"]["btc"], hist_thirty["market_data"]["total_volume"]["btc"]]
-}
-market_df = pd.DataFrame(marketcap_data, index = date)
-volume_df = pd.DataFrame(volume_data, index = date)
-
-market_col, volume_col = st.columns([1,1])
-# st.subheader('Market Capitalisation in Price (BTC) for a week and a month ago')
-market_col.subheader("7 days")
-market_col.area_chart(market_df)
-volume_col.subheader("30 days")
-volume_col.area_chart(volume_df)
+with thirtyday_col:
+    st.subheader("30 Days Chart")
+    create_area_chart("bitcoin", 30)
  
 # Trading Volume Comparison:  
 # Provide a bar chart or line chart using Streamlit to compare the trading volumes of different cryptocurrencies.
